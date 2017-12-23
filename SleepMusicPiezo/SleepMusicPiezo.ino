@@ -1,3 +1,5 @@
+#include <avr/sleep.h> //Needed for sleep_mode
+#include <avr/wdt.h> //Needed to enable/disable watch dog timer
 /////////////////////////MUSICAL NOTES/////////////////////////////
 #define  a2     110 
 #define  aS2    117
@@ -108,11 +110,13 @@
 
 ////////////VARIABLES///////////////////////////////////////
 //Connect the piezo wires to these pins
-const int piezoPin1 =  12;
-const int piezoPin2 =  13;  
+const int piezoPin1 =  0;
+const int piezoPin2 =  1;  
+int count = 0;
+int randTime = 0;
 
 //speed the music plays at (<1 increase speed, >1 decrease speed)
-const float sped = 1; 
+const float sped = 3; 
 
 //vars used in program
 int piezoState1 = LOW;
@@ -121,7 +125,7 @@ int piezoState2 = HIGH;
 ////////////VARIABLES///////////////////////////////////////
 
 
-///////////////////////////SONGS N STUFF///////////////////////////////////
+///////////////////////////SONGS N STUFF///////////////////////////////////some of these are a little off key
 //tetris  
 int melodyT[] = {a6 ,e6 ,f6 ,g6 ,a6 ,g6 ,f6 ,e6 ,   d6 ,d6 ,f6 ,a6 ,g6 ,f6 ,   e6 ,f6 ,g6 ,a6 ,   f6 ,d6 ,d6 ,   R  ,g6 ,aS6 ,d7 ,c7 ,b6 ,   a6 ,f6 ,a6 ,g6 ,f6 ,   e6 ,e6 ,f6 ,g6 ,a6 ,   f6 ,d6 ,d6 ,R };
 int beatsT[]  = {320,160,160,160,80 ,80 ,160,160,   320,160,160,320,160,160,   480,160,320,320,   320,320,640,   160,320,160 ,320,160,160,   480,160,320,160,160,   320,160,160,320,320,   320,320,320,320};
@@ -134,39 +138,51 @@ int beatsG[]  = {320,160,160,160,160,320,160,320,160,320,160,160,   160,160,320,
 int melodyM[] = {e6,e6,R,e6, R,c6,e6,R, g6,R,R,R, g5,R,R,R, c6,R,R,g5, R,R,e5,R, R,a5,R,b5, R,aS5,a5,R, g5,e6,g6,a6,R,f6,g6, R,e6,R,c6, d6,b5,R,R};
 int beatsM[]  = {160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160,160 };
 
+//Nokia Ringtone!
+int melodyN[] = {e6 ,d6 ,fS5 ,gS5 ,  cS6 ,b5 ,d5 ,e5 ,  b5 ,a5 ,cS5 ,e5 , a5};
+int beatsN[] =  {80 ,80 ,160,160,  80, 80 ,160,160,  80 ,80 ,160,160, 320};
 
-//child of light (low)
-//int melodyL[] = {g5 ,a5 ,b5 ,a5 ,g5 ,   b5, d5 ,d5 ,   g5 ,a5 ,b5 ,a5 ,g5 ,   b5, d5 ,d5 , b5,    a5 ,g5 ,fS5,g5 ,a5 ,    g5 ,fS5,e5 ,   d6 ,c6 ,fS5,g5 ,a5 ,   g5 ,fS5,e5 };
-//int beatsL[] =  {375,125,250,125,125,   125,125,750,   375,125,250,125,125,   125,125,500,250,    375,125,250,125,125,    62 ,63 ,875,   375,125,250,125,125,   62 ,63 ,875};
-
-//child of light (high)
-int melodyL[] = {g6 ,a6 ,b6 ,a6 ,g6 ,   b6, d6 ,d6 ,   g6 ,a6 ,b6 ,a6 ,g6 ,   b6, d6 ,d6 , b6,    a6 ,g6 ,fS6,g6 ,a6 ,    g6 ,fS6,e6 ,   d7 ,c7 ,fS6,g6 ,a6 ,   g6 ,fS6,e6 };
-int beatsL[] =  {375,125,250,125,125,   125,125,750,   375,125,250,125,125,   125,125,500,250,    375,125,250,125,125,    62 ,63 ,875,   375,125,250,125,125,   62 ,63 ,875};
+//RICK ROLLL
+int melodyR[] = {gS5 ,aS5 , cS6, aS5, f6, f6, dS6,   gS5 ,aS5 , cS6, aS5, dS6, dS6, cS6,   gS5 ,aS5 , cS6, aS5, cS6, dS6, c6};//,  aS5, gS5, dS6, c6};
+int beatsR[] =  { 40,  40,   40,  40,120,120, 240,   40,    40,  40,  40, 120, 120, 240,     40,  40,  40,  40, 120, 120,240};//,   80,  80,  160, 320};
 ///////////////////////////SONGS N STUFF///////////////////////////////////
 
 
-void setup() {
+ISR(WDT_vect) {
+}
+
+void setup()
+{
+  ADCSRA &= ~(1<<ADEN); //Disable ADC
   pinMode(piezoPin1, OUTPUT);
   pinMode(piezoPin2, OUTPUT);
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  sleep_enable();
 }
 
-
-void loop() {
-  //change melodyL and beatsL to other respective melody and beats arrays to change music
-  for(int i = 0; i < (sizeof(melodyL)/sizeof(int)); i++){
+void loop() 
+{
+  //To change tune swap out all "melodyR" and "beatsR" with respective beats & melody arrays
+  setup_watchdog(9); //8sec sleep
+  sleep_mode(); 
+  if(count >= randTime){
+  randTime = random(225, 300);
+  count = 0;
+  for(int i = 0; i < (sizeof(melodyR)/sizeof(int)); i++){
     //Determine if there's a rest and do stuff accordingly
-    if(melodyL[i] == 0){
-      playRest(beatsL[i] * sped);
+    if(melodyR[i] == 0){
+      playRest(beatsR[i] * sped);
     }
     else{
-      playNote(melodyL[i], beatsL[i] * sped);
+      playNote(melodyR[i], beatsR[i] * sped);
     }
   }
+   }else{
+    count++;
+   }
+  }
+ 
 
-  //pause between looping music
-  playRest(2000);
-
-}
 
 //THIS FUNCTION PLAYS NOTES (wow)
 void playNote(double frequency, unsigned long duration){ //frequency in Hz, duration in ms
@@ -205,3 +221,21 @@ void playRest(unsigned long duration){ //frequency in Hz, duration in ms
 }
 
 
+
+//Sets the watchdog timer to wake us up, but not reset
+//0=16ms, 1=32ms, 2=64ms, 3=128ms, 4=250ms, 5=500ms
+//6=1sec, 7=2sec, 8=4sec, 9=8sec
+//From: http://interface.khm.de/index.php/lab/experiments/sleep_watchdog_battery/
+void setup_watchdog(int timerPrescaler) {
+
+  if (timerPrescaler > 9 ) timerPrescaler = 9; //Limit incoming amount to legal settings
+
+  byte bb = timerPrescaler & 7; 
+  if (timerPrescaler > 7) bb |= (1<<5); //Set the special 5th bit if necessary
+
+  //This order of commands is important and cannot be combined
+  MCUSR &= ~(1<<WDRF); //Clear the watch dog reset
+  WDTCR |= (1<<WDCE) | (1<<WDE); //Set WD_change enable, set WD enable
+  WDTCR = bb; //Set new watchdog timeout value
+  WDTCR |= _BV(WDIE); //Set the interrupt enable, this will keep unit from resetting after each int
+}
